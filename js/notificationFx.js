@@ -4,12 +4,12 @@
  *
  * Licensed under the MIT license.
  * http://www.opensource.org/licenses/mit-license.php
- * 
+ *
  * Copyright 2014, Codrops
  * http://www.codrops.com
  */
 ;( function( window ) {
-	
+
 	'use strict';
 
 	var docElem = window.document.documentElement,
@@ -22,12 +22,12 @@
 		},
 		// animation end event name
 		animEndEventName = animEndEventNames[ Modernizr.prefixed( 'animation' ) ];
-	
+
 	/**
 	 * extend obj function
 	 */
 	function extend( a, b ) {
-		for( var key in b ) { 
+		for( var key in b ) {
 			if( b.hasOwnProperty( key ) ) {
 				a[key] = b[key];
 			}
@@ -38,7 +38,7 @@
 	/**
 	 * NotificationFx function
 	 */
-	function NotificationFx( options ) {	
+	function NotificationFx( options ) {
 		this.options = extend( {}, this.options );
 		extend( this.options, options );
 		this._init();
@@ -64,7 +64,7 @@
 		// notice, warning, error, success
 		// will add class ns-type-warning, ns-type-error or ns-type-success
 		type : 'error',
-		// if the user doesn´t close the notification then we remove it 
+		// if the user doesn´t close the notification then we remove it
 		// after the following time
 		ttl : 6000,
 		// callbacks
@@ -91,13 +91,15 @@
 
 		// dismiss after [options.ttl]ms
 		var self = this;
-		
+
 		if(this.options.ttl) { // checks to make sure ttl is not set to false in notification initialization
 			this.dismissttl = setTimeout( function() {
 				if( self.active ) {
 					self.dismiss();
 				}
 			}, this.options.ttl );
+
+			this.openedAt = $.now();
 		}
 
 		// init events
@@ -111,6 +113,19 @@
 		var self = this;
 		// dismiss notification
 		this.ntf.querySelector( '.ns-close' ).addEventListener( 'click', function() { self.dismiss(); } );
+
+		$(window).focus(function() {
+			self.dismissttl = setTimeout( function() {
+				if( self.active ) {
+					self.dismiss();
+				}
+			}, self.options.ttl );
+		});
+
+		$(window).blur(function() {
+			clearTimeout( self.dismissttl );
+			self.options.ttl = self.options.ttl - ($.now() - self.openedAt);
+		});
 	}
 
 	/**
@@ -120,8 +135,7 @@
 		this.active = true;
 		classie.remove( this.ntf, 'ns-hide' );
 		classie.add( this.ntf, 'ns-show' );
-		if (typeof this.options.onOpen === 'function')
-			this.options.onOpen();
+		this.options.onOpen();
 	}
 
 	/**
@@ -130,14 +144,14 @@
 	NotificationFx.prototype.dismiss = function() {
 		var self = this;
 		this.active = false;
+		$(window).off('focus blur');
 		clearTimeout( this.dismissttl );
 		classie.remove( this.ntf, 'ns-show' );
 		setTimeout( function() {
 			classie.add( self.ntf, 'ns-hide' );
-			
+
 			// callback
-			if (typeof self.options.onClose === 'function')
-				self.options.onClose();
+			self.options.onClose();
 		}, 25 );
 
 		// after animation ends remove ntf from the DOM
@@ -146,7 +160,7 @@
 				if( ev.target !== self.ntf ) return false;
 				this.removeEventListener( animEndEventName, onEndAnimationFn );
 			}
-			self.options.wrapper.removeChild( self.ntf );
+			self.options.wrapper.removeChild( this );
 		};
 
 		if( support.animations ) {
